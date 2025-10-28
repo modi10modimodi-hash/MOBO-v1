@@ -1,7 +1,7 @@
 {
   "name": "cold-room-chat-v2",
-  "version": "2.0.1",
-  "description": "Cold Room - Premium Chat Platform V2 - Complete Edition (Fixed)",
+  "version": "2.0.2",
+  "description": "Cold Room - Premium Chat Platform V2 - Complete Edition (Fixed & Polished)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
