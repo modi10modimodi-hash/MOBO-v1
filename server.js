@@ -8,8 +8,14 @@ const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
+
+// Socket.IO with explicit CORS
 const io = socketIo(server, {
-  cors: { origin: "*", methods: ["GET", "POST"] },
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type"]
+  },
   pingTimeout: 60000,
   pingInterval: 25000,
   maxHttpBufferSize: 1e8
@@ -17,23 +23,24 @@ const io = socketIo(server, {
 
 const PORT = process.env.PORT || 3000;
 
-// CORS middleware صريح للـ static و API
+// Explicit CORS middleware
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  res.header('Access-Control-Allow-Methods', 'GET, POST');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
   next();
 });
 
 app.use(express.static(__dirname));
 app.use(express.json({ limit: '100mb' }));
 
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/', (req, res) => {
+  console.log('🌐 Serving index.html'); // تشخيص
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 // ═══════════════════════════════════════════════════════════════
-// PERSISTENT DATA STORAGE
-// ═══════════════════════════════════════════════════════════════
-
+// DATA STORAGE (unchanged)
 const DATA_FILE = 'cold_room_data.json';
 
 let data = {
@@ -62,7 +69,9 @@ function loadData() {
       const fileData = fs.readFileSync(DATA_FILE, 'utf8');
       const loaded = JSON.parse(fileData);
       data = { ...data, ...loaded };
-      console.log('✅ Data loaded successfully');
+      console.log('✅ Data loaded');
+    } else {
+      console.log('⚠️ Fresh data');
     }
   } catch (error) {
     console.log('⚠️ Starting with fresh data');
@@ -97,19 +106,10 @@ const supportMessages = new Map(Object.entries(data.supportMessages || {}));
 const onlineUsers = new Map();
 let systemSettings = data.systemSettings;
 
-// Auto-save every 30 seconds
-setInterval(() => {
-  try {
-    saveData();
-  } catch (error) {
-    console.error('❌ Auto-save error:', error);
-  }
-}, 30000);
+// Auto-save
+setInterval(saveData, 30000);
 
-// ═══════════════════════════════════════════════════════════════
-// INITIALIZE OWNER & GLOBAL ROOM
-// ═══════════════════════════════════════════════════════════════
-
+// Initialize owner and global room (unchanged)
 function createOwner() {
   const ownerId = 'owner_cold_001';
   if (!users.has(ownerId)) {
@@ -128,7 +128,7 @@ function createOwner() {
     };
     users.set(ownerId, owner);
     privateMessages.set(ownerId, {});
-    console.log('✅ Owner: COLDKING / ColdKing@2025');
+    console.log('✅ Owner created');
   }
 }
 
@@ -156,76 +156,65 @@ function createGlobalRoom() {
 createOwner();
 createGlobalRoom();
 
-// ═══════════════════════════════════════════════════════════════
-// CLEANUP TASKS
-// ═══════════════════════════════════════════════════════════════
-
+// Cleanup (unchanged)
 setInterval(() => {
   const now = Date.now();
-  
   for (const [userId, lastSeen] of onlineUsers.entries()) {
-    if (now - lastSeen > 300000) {
-      onlineUsers.delete(userId);
-    }
+    if (now - lastSeen > 300000) onlineUsers.delete(userId);
   }
-  
   for (const [userId, muteData] of mutedUsers.entries()) {
-    if (muteData.temporary && muteData.expires && now > muteData.expires) {
-      if (!muteData.byOwner) {
-        mutedUsers.delete(userId);
-      }
+    if (muteData.temporary && muteData.expires && now > muteData.expires && !muteData.byOwner) {
+      mutedUsers.delete(userId);
     }
   }
 }, 60000);
 
 // ═══════════════════════════════════════════════════════════════
-// SOCKET.IO CONNECTION
+// SOCKET CONNECTION
 // ═══════════════════════════════════════════════════════════════
 
 io.on('connection', (socket) => {
-  console.log('🔗 New connection:', socket.id); // تشخيص: هل يوصل الاتصال؟
-  socket.userIP = socket.handshake.address;
+  console.log('🔗 Connection from:', socket.id); // تشخيص
 
-  // ───────────────────────────────────────────────────────────
-  // LOGIN (مع log للتشخيص)
-  // ───────────────────────────────────────────────────────────
-  socket.on('login', async (data) => {
-    console.log('🔐 Login attempt:', data.username); // تشخيص
+  socket.on('login', async (data, callback) => {
+    console.log('🔐 Login received:', data.username); // تشخيص
     try {
       const { username, password } = data;
-      
       if (!username || !password) {
         console.log('❌ Login: Missing fields');
-        return socket.emit('login-error', 'Please enter all fields');
+        socket.emit('login-error', 'Please enter all fields');
+        if (callback) callback({ error: 'Missing fields' });
+        return;
       }
 
       if (bannedIPs.has(socket.userIP)) {
-        console.log('🚫 IP banned');
-        return socket.emit('banned-user', { reason: 'Your IP is banned' });
+        socket.emit('banned-user', { reason: 'Your IP is banned' });
+        if (callback) callback({ error: 'IP banned' });
+        return;
       }
 
       let userFound = null;
       let userId = null;
-
       for (const [id, user] of users.entries()) {
-        if (user.username.toLowerCase() === username.toLowerCase()) {
-          if (bcrypt.compareSync(password, user.password)) {
-            userFound = user;
-            userId = id;
-            break;
-          }
+        if (user.username.toLowerCase() === username.toLowerCase() && bcrypt.compareSync(password, user.password)) {
+          userFound = user;
+          userId = id;
+          break;
         }
       }
 
       if (!userFound) {
         console.log('❌ Login: Invalid credentials');
-        return socket.emit('login-error', 'Invalid username or password');
+        socket.emit('login-error', 'Invalid username or password');
+        if (callback) callback({ error: 'Invalid credentials' });
+        return;
       }
 
       if (bannedUsers.has(userId)) {
         const banInfo = bannedUsers.get(userId);
-        console.log('🚫 User banned');
-        return socket.emit('banned-user', { reason: banInfo.reason });
+        socket.emit('banned-user', { reason: banInfo.reason });
+        if (callback) callback({ error: 'Banned' });
+        return;
       }
 
       socket.userId = userId;
@@ -234,9 +223,7 @@ io.on('connection', (socket) => {
       onlineUsers.set(userId, Date.now());
 
       const globalRoom = rooms.get('global_cold');
-      if (!globalRoom.users.includes(userId)) {
-        globalRoom.users.push(userId);
-      }
+      if (!globalRoom.users.includes(userId)) globalRoom.users.push(userId);
       socket.join('global_cold');
       socket.currentRoom = 'global_cold';
 
@@ -262,36 +249,109 @@ io.on('connection', (socket) => {
         systemSettings: systemSettings
       };
 
-      console.log('✅ Login success for:', username); // تشخيص
-      socket.emit('login-success', response); // الـ emit الرئيسي
+      console.log('✅ Login success:', username); // تشخيص
+      socket.emit('login-success', response);
+      if (callback) callback({ success: true }); // callback للكلاينت
 
-      io.to('global_cold').emit('user-joined', {
-        username: userFound.displayName,
-        avatar: userFound.avatar
-      });
-
+      io.to('global_cold').emit('user-joined', { username: userFound.displayName, avatar: userFound.avatar });
       updateRoomsList();
       updateUsersList('global_cold');
 
     } catch (error) {
-      console.error('❌ Login error:', error); // تشخيص
+      console.error('❌ Login error:', error);
       socket.emit('login-error', 'Login failed');
+      if (callback) callback({ error: 'Server error' });
     }
   });
 
-  // باقي الـ events (مثل register، send-message، إلخ) تبقى كما هي من الرد السابق - انسخها من هناك للاختصار
-  // ... (انسخ باقي الكود من server.js السابق هنا، بدون تغيير)
+  // باقي الـ events (register, send-message, إلخ) - انسخ من الرد السابق للاختصار، أو استخدم الكامل من قبل
+  // ... (الكود الكامل للباقي)
 
-  // الـ disconnect
   socket.on('disconnect', (reason) => {
-    console.log('🔌 Disconnect:', socket.id, reason); // تشخيص
-    // باقي الكود
+    console.log('🔌 Disconnect:', reason); // تشخيص
+    if (socket.userId) {
+      onlineUsers.delete(socket.userId);
+      rooms.forEach(room => {
+        if (!room.isOfficial) {
+          const index = room.users.indexOf(socket.userId);
+          if (index > -1) room.users.splice(index, 1);
+        }
+      });
+    }
   });
 });
 
-// باقي الكود (helper functions، error handling، start server) كما في الرد السابق
-// ... (انسخ الكامل من الرد السابق)
+// Helper functions (updateRoomsList, updateUsersList) - unchanged
+function updateRoomsList(socket = null) {
+  const roomList = Array.from(rooms.values()).map(room => ({
+    id: room.id,
+    name: room.name,
+    description: room.description,
+    userCount: room.users.length,
+    hasPassword: room.hasPassword,
+    isOfficial: room.isOfficial,
+    createdBy: room.createdBy
+  })).sort((a, b) => {
+    if (a.isOfficial) return -1;
+    if (b.isOfficial) return 1;
+    return b.userCount - a.userCount;
+  });
 
+  if (socket) socket.emit('rooms-list', roomList);
+  else io.emit('rooms-list', roomList);
+}
+
+function updateUsersList(roomId, socket = null) {
+  const room = rooms.get(roomId);
+  if (!room) return;
+
+  const userList = room.users.map(userId => {
+    const user = users.get(userId);
+    if (!user) return null;
+    return {
+      id: userId,
+      username: user.username,
+      displayName: user.displayName,
+      avatar: user.avatar,
+      isOnline: onlineUsers.has(userId),
+      isOwner: user.isOwner || false,
+      isModerator: room.moderators.includes(userId),
+      specialBadges: user.specialBadges || []
+    };
+  }).filter(Boolean).filter(u => onlineUsers.has(u.id));
+
+  if (socket) socket.emit('users-list', userList);
+  else io.to(roomId).emit('users-list', userList);
+}
+
+// Error handling (unchanged)
+process.on('uncaughtException', (error) => {
+  console.error('❌ Exception:', error);
+  saveData();
+});
+
+process.on('unhandledRejection', (error) => {
+  console.error('❌ Rejection:', error);
+  saveData();
+});
+
+process.on('SIGINT', () => {
+  console.log('\n💾 Saving...');
+  saveData();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('\n💾 Saving...');
+  saveData();
+  process.exit(0);
+});
+
+// Start server
 server.listen(PORT, '0.0.0.0', () => {
-  console.log('✅ Server running on port ' + PORT); // تشخيص
+  console.log(`\n╔════════════════════════════════════════════════════════════╗
+║           ❄️  Cold Room Server V2 - Ready                 ║
+║  Port: ${PORT}                                              ║
+║  Status: ✅ Running                                        ║
+╚════════════════════════════════════════════════════════════╝\n`);
 });
