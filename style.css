@@ -54,10 +54,7 @@ body {
     50% { background-position: 100% 50%; }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   SNOWFALL & SNOWMAN
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Snow & Snowman */
 .snowflakes {
     position: fixed;
     top: 0;
@@ -96,10 +93,7 @@ body {
     transition: opacity 0.3s ease;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   SCREENS
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Screens */
 .screen {
     display: none;
     min-height: 100vh;
@@ -113,20 +107,11 @@ body {
 }
 
 @keyframes fadeIn {
-    from { 
-        opacity: 0; 
-        transform: translateY(20px); 
-    }
-    to { 
-        opacity: 1; 
-        transform: translateY(0); 
-    }
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   LOGIN SCREEN
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Login Screen */
 .login-container {
     max-width: 900px;
     margin: 0 auto;
@@ -142,14 +127,8 @@ body {
 }
 
 @keyframes logoEntrance {
-    from {
-        opacity: 0;
-        transform: scale(0.8) translateY(-30px);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
+    from { opacity: 0; transform: scale(0.8) translateY(-30px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .logo-image {
@@ -201,10 +180,7 @@ body {
     margin: 2rem 0;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   GLASS CARDS
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Glass Cards */
 .glass-card {
     background: var(--glass-bg);
     backdrop-filter: blur(20px);
@@ -231,10 +207,7 @@ body {
     text-align: center;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   INPUT FIELDS
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Inputs */
 .input-group {
     display: flex;
     flex-direction: column;
@@ -270,10 +243,7 @@ select.modern-input {
     cursor: pointer;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   BUTTONS
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Buttons */
 .modern-btn {
     background: linear-gradient(135deg, var(--ice-blue), var(--deep-blue));
     border: none;
@@ -328,10 +298,7 @@ select.modern-input {
     font-size: 0.9rem;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   LOADING OVERLAY (CENTERED)
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Loading overlay */
 #loading-overlay {
     position: fixed;
     top: 0;
@@ -369,10 +336,7 @@ select.modern-input {
     100% { transform: rotate(360deg); }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   SUPPORT SECTION
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Support */
 .support-section {
     margin-top: 1.5rem;
     border: 2px solid rgba(239, 68, 68, 0.3);
@@ -382,10 +346,7 @@ select.modern-input {
     color: #fca5a5;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   COPYRIGHT
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Copyright */
 .copyright-notice {
     text-align: center;
     margin-top: 2rem;
@@ -397,10 +358,7 @@ select.modern-input {
     line-height: 1.6;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   CHAT CONTAINER
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Chat container */
 .chat-container {
     display: flex;
     flex-direction: column;
@@ -409,10 +367,7 @@ select.modern-input {
     backdrop-filter: blur(10px);
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   CHAT HEADER
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Header */
 .chat-header {
     background: var(--glass-bg);
     backdrop-filter: blur(20px);
@@ -491,10 +446,7 @@ select.modern-input {
     flex-wrap: wrap;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   BADGES
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Badges */
 .badge {
     display: inline-block;
     padding: 0.3rem 0.7rem;
@@ -516,10 +468,7 @@ select.modern-input {
     box-shadow: 0 2px 10px rgba(59, 130, 246, 0.4);
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   MAIN CHAT AREA
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Main chat area */
 .chat-main {
     display: flex;
     flex: 1;
@@ -527,10 +476,7 @@ select.modern-input {
     position: relative;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   SIDEBARS WITH CLOSE BUTTON
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Sidebars */
 .sidebar {
     background: var(--glass-bg);
     backdrop-filter: blur(20px);
@@ -550,14 +496,8 @@ select.modern-input {
 }
 
 @keyframes slideInLeft {
-    from {
-        opacity: 0;
-        transform: translateX(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
 }
 
 .sidebar-header {
@@ -596,10 +536,7 @@ select.modern-input {
     transform: rotate(90deg) scale(1.1);
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   ROOMS & USERS LISTS
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Rooms & Users lists */
 .rooms-list, .users-list {
     display: flex;
     flex-direction: column;
@@ -659,10 +596,7 @@ select.modern-input {
     opacity: 0.7;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   USER ITEMS
-   ═══════════════════════════════════════════════════════════════ */
-
+/* User items */
 .user-item {
     display: flex;
     align-items: center;
@@ -698,12 +632,8 @@ select.modern-input {
 }
 
 @keyframes pulse {
-    0%, 100% { 
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); 
-    }
-    50% { 
-        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); 
-    }
+    0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    50% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
 }
 
 .user-info {
@@ -716,10 +646,7 @@ select.modern-input {
     color: var(--text-primary);
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   CHAT CONTENT
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Chat content */
 .chat-content {
     flex: 1;
     display: flex;
@@ -738,10 +665,7 @@ select.modern-input {
     scroll-behavior: smooth;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   YOUTUBE PLAYER (FIXED SIZE & POSITION)
-   ═══════════════════════════════════════════════════════════════ */
-
+/* YouTube player */
 #youtube-player-container {
     padding: 1rem;
     background: rgba(0, 0, 0, 0.8);
@@ -749,12 +673,13 @@ select.modern-input {
     margin: 1rem auto;
     text-align: center;
     max-width: 680px;
+    z-index: 2; /* sit above background but below modals */
+    position: relative;
 }
 
 #youtube-player-container.size-small {
     max-width: 360px;
 }
-
 #youtube-player-container.size-small #youtube-player {
     width: 320px;
     height: 180px;
@@ -763,7 +688,6 @@ select.modern-input {
 #youtube-player-container.size-medium {
     max-width: 520px;
 }
-
 #youtube-player-container.size-medium #youtube-player {
     width: 480px;
     height: 270px;
@@ -772,7 +696,6 @@ select.modern-input {
 #youtube-player-container.size-large {
     max-width: 680px;
 }
-
 #youtube-player-container.size-large #youtube-player {
     width: 640px;
     height: 360px;
@@ -801,7 +724,6 @@ select.modern-input {
         max-width: 100%;
         padding: 0.5rem;
     }
-    
     #youtube-player-container.size-large #youtube-player,
     #youtube-player-container.size-medium #youtube-player,
     #youtube-player-container.size-small #youtube-player {
@@ -811,10 +733,7 @@ select.modern-input {
     }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   WELCOME MESSAGE
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Welcome message */
 .welcome-message {
     text-align: center;
     padding: 3rem 2rem;
@@ -824,14 +743,8 @@ select.modern-input {
 }
 
 @keyframes welcomeEntrance {
-    from {
-        opacity: 0;
-        transform: scale(0.9) translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
+    from { opacity: 0; transform: scale(0.9) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .welcome-logo {
@@ -850,10 +763,7 @@ select.modern-input {
     color: var(--light-blue);
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   MESSAGES
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Messages */
 .message {
     background: var(--glass-bg);
     backdrop-filter: blur(10px);
@@ -878,14 +788,8 @@ select.modern-input {
 }
 
 @keyframes messageSlide {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .message-header {
@@ -933,10 +837,7 @@ select.modern-input {
     opacity: 0.6;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   CHAT TOOLS
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Chat tools */
 .chat-tools {
     background: var(--glass-bg);
     backdrop-filter: blur(20px);
@@ -1001,10 +902,7 @@ select.modern-input {
     box-shadow: 0 5px 15px rgba(74, 144, 226, 0.3);
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   MODALS
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Modals */
 .modal {
     display: none;
     position: fixed;
@@ -1042,14 +940,8 @@ select.modern-input {
 }
 
 @keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(50px) scale(0.9);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
+    from { opacity: 0; transform: translateY(50px) scale(0.9); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .modal-close {
@@ -1081,10 +973,7 @@ select.modern-input {
     margin-top: 1rem;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   OWNER PANEL
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Owner Panel */
 .owner-tabs {
     display: flex;
     gap: 0.5rem;
@@ -1171,10 +1060,7 @@ select.modern-input {
     flex-wrap: wrap;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   SETTINGS
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Settings grid */
 .settings-grid {
     display: grid;
     gap: 1.5rem;
@@ -1199,10 +1085,7 @@ select.modern-input {
     margin: 0.5rem 0;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   ACTIONS MENU (FIXED CENTER)
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Actions Menu */
 .actions-menu {
     position: fixed;
     top: 50%;
@@ -1262,10 +1145,7 @@ select.modern-input {
     background: rgba(239, 68, 68, 0.4);
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   PRIVATE CHAT
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Private chat */
 .private-chat {
     display: grid;
     grid-template-columns: 220px 1fr;
@@ -1307,9 +1187,7 @@ select.modern-input {
     gap: 0.8rem;
 }
 
-.private-input-area textarea {
-    flex: 1;
-}
+.private-input-area textarea { flex: 1; }
 
 .private-user-item {
     padding: 1rem;
@@ -1319,6 +1197,9 @@ select.modern-input {
     margin-bottom: 0.5rem;
     background: rgba(255, 255, 255, 0.05);
     border: 2px solid transparent;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
 }
 
 .private-user-item:hover {
@@ -1333,10 +1214,7 @@ select.modern-input {
     border-left: 4px solid #4a90e2;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   PARTY MODE
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Party mode */
 body.party-mode {
     animation: partyBackground 2s ease-in-out infinite;
 }
@@ -1353,39 +1231,15 @@ body.party-mode {
     50% { transform: translateY(-50px) scale(1.2); }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   SCROLLBARS (THEMED)
-   ═══════════════════════════════════════════════════════════════ */
+/* Scrollbars */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--scrollbar-track); border-radius: 10px; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 10px; transition: background 0.3s; }
+::-webkit-scrollbar-thumb:hover { background: var(--ice-blue); }
 
-::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-}
+* { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track); }
 
-::-webkit-scrollbar-track {
-    background: var(--scrollbar-track);
-    border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb);
-    border-radius: 10px;
-    transition: background 0.3s;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: var(--ice-blue);
-}
-
-* {
-    scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   RESPONSIVE DESIGN
-   ═══════════════════════════════════════════════════════════════ */
-
+/* Responsive */
 @media (max-width: 1024px) {
     .sidebar {
         position: fixed;
@@ -1395,200 +1249,59 @@ body.party-mode {
         z-index: 1000;
         transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    
     .sidebar.active {
         right: 0;
         box-shadow: -5px 0 20px rgba(0, 0, 0, 0.5);
     }
-
-    #snowman-canvas {
-        transform: translateX(-50%) scale(0.7);
-        opacity: 0.1;
-    }
-
-    .actions-menu {
-        min-width: 280px;
-        max-width: 90%;
-    }
+    #snowman-canvas { transform: translateX(-50%) scale(0.7); opacity: 0.1; }
+    .actions-menu { min-width: 280px; max-width: 90%; }
 }
 
 @media (max-width: 768px) {
-    .login-options {
-        grid-template-columns: 1fr;
-    }
-    
-    .logo-text {
-        font-size: 2.5rem;
-    }
-
-    .logo-image {
-        width: 120px;
-        height: 120px;
-    }
-    
-    .chat-header {
-        flex-direction: column;
-        padding: 1rem;
-    }
-    
-    .header-left {
-        flex-direction: column;
-        text-align: center;
-        width: 100%;
-        gap: 1rem;
-    }
-
-    .header-right {
-        width: 100%;
-        justify-content: center;
-    }
-    
-    .message {
-        max-width: 95%;
-    }
-
-    .private-chat {
-        grid-template-columns: 1fr;
-        height: auto;
-    }
-
-    .private-users-list {
-        border-right: none;
-        border-bottom: 2px solid var(--glass-border);
-        padding-right: 0;
-        padding-bottom: 1rem;
-        max-height: 150px;
-    }
-
-    #snowman-canvas {
-        display: none;
-    }
-
-    .modal-content {
-        width: 95%;
-    }
-
-    .actions-menu {
-        min-width: 90%;
-    }
-
+    .login-options { grid-template-columns: 1fr; }
+    .logo-text { font-size: 2.5rem; }
+    .logo-image { width: 120px; height: 120px; }
+    .chat-header { flex-direction: column; padding: 1rem; }
+    .header-left { flex-direction: column; text-align: center; width: 100%; gap: 1rem; }
+    .header-right { width: 100%; justify-content: center; }
+    .message { max-width: 95%; }
+    .private-chat { grid-template-columns: 1fr; height: auto; }
+    .private-users-list { border-right: none; border-bottom: 2px solid var(--glass-border); padding-right: 0; padding-bottom: 1rem; max-height: 150px; }
+    #snowman-canvas { display: none; }
+    .modal-content { width: 95%; }
+    .actions-menu { min-width: 90%; }
     #youtube-player-container.size-large #youtube-player,
-    #youtube-player-container.size-medium #youtube-player {
-        width: 100%;
-        height: auto;
-        aspect-ratio: 16/9;
-    }
+    #youtube-player-container.size-medium #youtube-player { width: 100%; height: auto; aspect-ratio: 16/9; }
 }
 
 @media (max-width: 480px) {
-    .screen {
-        padding: 1rem;
-    }
-
-    .logo-image {
-        width: 100px;
-        height: 100px;
-    }
-    
-    .logo-text {
-        font-size: 2rem;
-    }
-    
-    .glass-card {
-        padding: 1.5rem;
-    }
-
-    .modern-btn {
-        padding: 0.9rem 1.5rem;
-        font-size: 1rem;
-    }
-
-    .modern-btn.small {
-        padding: 0.5rem 0.8rem;
-        font-size: 0.85rem;
-    }
-
-    .chat-messages {
-        padding: 0.8rem;
-    }
-
-    .message-input {
-        font-size: 0.9rem;
-        padding: 0.7rem 1rem;
-    }
-
-    .message {
-        padding: 0.7rem 0.9rem;
-    }
-
-    .sidebar {
-        width: 260px;
-    }
-
-    .header-logo-image {
-        width: 40px;
-        height: 40px;
-    }
-
-    .header-logo h1 {
-        font-size: 1.2rem;
-    }
-
-    .room-info {
-        font-size: 0.75rem;
-    }
-
-    .current-user-avatar {
-        font-size: 1.5rem;
-    }
-
-    .user-status {
-        padding: 0.4rem 0.8rem;
-        font-size: 0.85rem;
-    }
-
-    .actions-menu-header {
-        font-size: 1.1rem;
-    }
-
-    .action-menu-btn {
-        padding: 0.8rem 1rem;
-        font-size: 0.85rem;
-    }
+    .screen { padding: 1rem; }
+    .logo-image { width: 100px; height: 100px; }
+    .logo-text { font-size: 2rem; }
+    .glass-card { padding: 1.5rem; }
+    .modern-btn { padding: 0.9rem 1.5rem; font-size: 1rem; }
+    .modern-btn.small { padding: 0.5rem 0.8rem; font-size: 0.85rem; }
+    .chat-messages { padding: 0.8rem; }
+    .message-input { font-size: 0.9rem; padding: 0.7rem 1rem; }
+    .message { padding: 0.7rem 0.9rem; }
+    .sidebar { width: 260px; }
+    .header-logo-image { width: 40px; height: 40px; }
+    .header-logo h1 { font-size: 1.2rem; }
+    .room-info { font-size: 0.75rem; }
+    .current-user-avatar { font-size: 1.5rem; }
+    .user-status { padding: 0.4rem 0.8rem; font-size: 0.85rem; }
+    .actions-menu-header { font-size: 1.1rem; }
+    .action-menu-btn { padding: 0.8rem 1rem; font-size: 0.85rem; }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   UTILITIES
-   ═══════════════════════════════════════════════════════════════ */
+/* Utilities */
+.text-center { text-align: center; }
+.hidden { display: none !important; }
+.fade-out { animation: fadeOut 0.3s ease-out forwards; }
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+.shake { animation: shake 0.5s ease-in-out; }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
 
-.text-center {
-    text-align: center;
-}
-
-.hidden {
-    display: none !important;
-}
-
-.fade-out {
-    animation: fadeOut 0.3s ease-out forwards;
-}
-
-@keyframes fadeOut {
-    from { opacity: 1; }
-    to { opacity: 0; }
-}
-
-.shake {
-    animation: shake 0.5s ease-in-out;
-}
-
-@keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-10px); }
-    75% { transform: translateX(10px); }
-}
-
-/* Smooth transitions for theme changes */
 body,
 .glass-card,
 .modern-btn,
@@ -1602,30 +1315,13 @@ body,
                 color 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   ACCESSIBILITY
-   ═══════════════════════════════════════════════════════════════ */
-
-* {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
-
-img {
-    image-rendering: -webkit-optimize-contrast;
-    -webkit-user-drag: none;
-    user-drag: none;
-}
-
-::selection {
-    background: rgba(74, 144, 226, 0.3);
-    color: white;
-}
+/* Accessibility */
+* { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+img { image-rendering: -webkit-optimize-contrast; -webkit-user-drag: none; user-drag: none; }
+::selection { background: rgba(74, 144, 226, 0.3); color: white; }
 
 @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
+    *, *::before, *::after {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
@@ -1636,17 +1332,12 @@ img {
     .modern-btn:hover,
     .room-item:hover,
     .user-item:hover,
-    .glass-card:hover {
-        transform: none;
-    }
-    
-    .modern-btn:active {
-        transform: scale(0.95);
-    }
+    .glass-card:hover { transform: none; }
+    .modern-btn:active { transform: scale(0.95); }
 }
 
-/* ═══════════════════════════════════════════════════════════════
+/* Footer comment
    © 2025 Cold Room - All Rights Reserved
    Professional Chat Platform - Complete Fixed Style System
-   Version: 2.0 Final Fixed
-   ═══════════════════════════════════════════════════════════════ */
+   Version: 2.1 Synced & Polished
+*/
