@@ -615,4 +615,13 @@ io.on('connection', (socket) => {
       }
 
       if (!room.users.includes(socket.userId)) {
+            }
+  });
+
+}); // ← إغلاق io.on('connection', …)
+
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
+
        
