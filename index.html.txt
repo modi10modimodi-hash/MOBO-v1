@@ -48,6 +48,11 @@
                     <button class="modern-btn" onclick="login()">
                         <span class="btn-text">Enter Chat</span>
                     </button>
+                    <div class="input-group" style="margin-top: 1rem;">
+                        <button class="modern-btn small" id="login-music-play" onclick="playLoginMusic()">
+                            ▶️ Play Login Music
+                        </button>
+                    </div>
                 </div>
                 
                 <!-- Register -->
@@ -58,7 +63,7 @@
                                maxlength="20" class="modern-input" autocomplete="username">
                         <input type="password" id="register-password" placeholder="Password (6+ chars)" 
                                maxlength="100" class="modern-input" autocomplete="new-password">
-                        <input type="text" id="register-displayname" placeholder="Display Name" 
+                        <input type="text" id="register-displayname" placeholder="Display Name (unique)" 
                                maxlength="30" class="modern-input">
                         <select id="register-gender" class="modern-input">
                             <option value="">Select Gender</option>
@@ -145,9 +150,10 @@
                 <div id="rooms-sidebar" class="sidebar rooms-sidebar">
                     <div class="sidebar-header">
                         <h3>🏠 Rooms</h3>
-                        <button class="modern-btn small" onclick="showCreateRoomModal()">
-                            ➕ New
-                        </button>
+                        <div style="display:flex; gap:.5rem;">
+                            <button class="modern-btn small" onclick="showCreateRoomModal()">➕ New</button>
+                            <div class="sidebar-close-btn" onclick="toggleRoomsList()">✕</div>
+                        </div>
                     </div>
                     <div id="rooms-list" class="rooms-list"></div>
                 </div>
@@ -156,7 +162,7 @@
                 <div id="users-sidebar" class="sidebar users-sidebar">
                     <div class="sidebar-header">
                         <h3>👥 Online (<span id="users-count">0</span>)</h3>
-                        <button class="modern-btn small" onclick="toggleUsersList()">✕</button>
+                        <div class="sidebar-close-btn" onclick="toggleUsersList()">✕</div>
                     </div>
                     <div id="users-list" class="users-list"></div>
                 </div>
@@ -166,8 +172,12 @@
                     <!-- YouTube Player -->
                     <div id="youtube-player-container" style="display: none;">
                         <div id="youtube-player"></div>
-                        <button class="modern-btn small" onclick="closeYouTube()" 
-                                style="margin: 10px;">✕ Close Video</button>
+                        <div class="youtube-controls">
+                            <button class="modern-btn small" onclick="resizeYT('small')">Small</button>
+                            <button class="modern-btn small" onclick="resizeYT('medium')">Medium</button>
+                            <button class="modern-btn small" onclick="resizeYT('large')">Large</button>
+                            <button class="modern-btn small" onclick="closeYouTube()">✕ Close Video</button>
+                        </div>
                     </div>
 
                     <div class="chat-messages" id="messages">
@@ -193,6 +203,9 @@
                             </button>
                             <button class="tool-btn" onclick="togglePartyMode()" title="Party Mode">
                                 🎉
+                            </button>
+                            <button class="tool-btn" onclick="playChatMusic()" title="Play Chat Music">
+                                ▶️
                             </button>
                         </div>
                         <form id="message-form" class="message-form">
@@ -402,9 +415,12 @@
                                 <button class="modern-btn small" onclick="updateChatMusic()">Update & Save</button>
                             </div>
                             <div class="setting-item">
-                                <button class="modern-btn" onclick="cleanAllRooms()">
-                                    🧹 Clean All Rooms
-                                </button>
+                                <label>Clean a specific room:</label>
+                                <select id="clean-room-select" class="modern-input"></select>
+                                <div style="display:flex; gap:.5rem; margin-top:.5rem;">
+                                    <button class="modern-btn small" onclick="cleanSelectedRoom()">🧹 Clean Selected Room</button>
+                                    <button class="modern-btn small" onclick="cleanAllRooms()">🧹 Clean All Rooms</button>
+                                </div>
                             </div>
                         </div>
                     </div>
