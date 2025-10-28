@@ -1239,8 +1239,8 @@ function loadSettings() {
     document.getElementById('setting-logo').value = systemSettings.siteLogo || '';
     document.getElementById('setting-title').value = systemSettings.siteTitle || '';
     document.getElementById('setting-color').value = systemSettings.backgroundColor || 'blue';
-    document.getElementById('setting-login-music').value = systemSettings.loginMusic || '';
-    document.getElementById('setting-chat-music').value = systemSettings.chatMusic || '';
+    document.getElementById('setting-login-music').value = systemSettings.loginMusic || 'https://i.top4top.io/m_3587b7y9s1.mp3';
+    document.getElementById('setting-chat-music').value = systemSettings.chatMusic || 'https://c.top4top.io/m_3586omdy81.mp3';
     document.getElementById('setting-login-volume').value = systemSettings.loginMusicVolume || 0.5;
     document.getElementById('setting-chat-volume').value = systemSettings.chatMusicVolume || 0.5;
 }
