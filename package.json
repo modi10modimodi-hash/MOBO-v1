@@ -1,0 +1,28 @@
+{
+  "name": "cold-room-chat-v2",
+  "version": "2.0.0",
+  "description": "Cold Room - Premium Chat Platform V2 - Complete Edition",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.5",
+    "bcryptjs": "^2.4.3",
+    "uuid": "^9.0.1"
+  },
+  "keywords": [
+    "chat",
+    "cold-room",
+    "realtime",
+    "websocket",
+    "persistent",
+    "complete"
+  ],
+  "author": "Cold Room King",
+  "license": "PROPRIETARY"
+}
