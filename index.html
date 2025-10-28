@@ -18,11 +18,8 @@
     <canvas id="snowman-canvas"></canvas>
     
     <!-- Background Music -->
-    <audio id="login-music" loop preload="auto"></audio>
-    <audio id="chat-music" loop preload="auto"></audio>
-
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" style="display: none;"></div>
+    <audio id="login-music" loop></audio>
+    <audio id="chat-music" loop></audio>
 
     <!-- Login Screen -->
     <div id="login-screen" class="screen active">
@@ -135,9 +132,6 @@
                     <button class="modern-btn small" onclick="showPrivateMessages()">
                         💬 Private
                     </button>
-                    <button class="modern-btn small" onclick="showChangeNameModal()">
-                        ✏️ Change Name
-                    </button>
                     <button class="modern-btn small" onclick="logout()">
                         🚪 Logout
                     </button>
@@ -151,11 +145,8 @@
                 <div id="rooms-sidebar" class="sidebar rooms-sidebar">
                     <div class="sidebar-header">
                         <h3>🏠 Rooms</h3>
-                        <button class="modern-btn small" onclick="toggleRoomsList()">✕</button>
-                    </div>
-                    <div class="sidebar-header">
                         <button class="modern-btn small" onclick="showCreateRoomModal()">
-                            ➕ New Room
+                            ➕ New
                         </button>
                     </div>
                     <div id="rooms-list" class="rooms-list"></div>
@@ -173,13 +164,10 @@
                 <!-- Messages Area -->
                 <div class="chat-content">
                     <!-- YouTube Player -->
-                    <div id="youtube-player-container">
+                    <div id="youtube-player-container" style="display: none;">
                         <div id="youtube-player"></div>
-                        <div class="youtube-size-controls" id="size-controls" style="display: none;">
-                            <button class="size-btn" onclick="changeYouTubeSize('small')">S</button>
-                            <button class="size-btn" onclick="changeYouTubeSize('medium')">M</button>
-                            <button class="size-btn" onclick="changeYouTubeSize('large')">L</button>
-                        </div>
+                        <button class="modern-btn small" onclick="closeYouTube()" 
+                                style="margin: 10px;">✕ Close Video</button>
                     </div>
 
                     <div class="chat-messages" id="messages">
@@ -221,24 +209,6 @@
         </div>
     </div>
 
-    <!-- Change Name Modal -->
-    <div id="change-name-modal" class="modal">
-        <div class="modal-content glass-card change-name-modal">
-            <span class="modal-close" onclick="hideModal('change-name-modal')">&times;</span>
-            <h2>✏️ Change Display Name</h2>
-            <div class="modal-body">
-                <input type="text" id="change-name-input" class="modern-input" 
-                       placeholder="New Display Name (2-30 chars)" maxlength="30">
-                <button class="modern-btn" onclick="changeDisplayName()">
-                    Update Name
-                </button>
-                <p style="font-size: 0.8rem; opacity: 0.7; margin-top: 1rem;">
-                    Names must be unique.
-                </p>
-            </div>
-        </div>
-    </div>
-
     <!-- Create Room Modal -->
     <div id="create-room-modal" class="modal">
         <div class="modal-content glass-card">
@@ -248,10 +218,9 @@
                 <input type="text" id="room-name-input" class="modern-input" 
                        placeholder="Room Name" maxlength="50">
                 <textarea id="room-desc-input" class="modern-input" 
-                          placeholder="Description" maxlength="200" rows="3"></textarea>
-                <label><input type="checkbox" id="room-password-check"> Add Password</label>
-                <input type="password" id="room-password-input" class="modern-input" 
-                       placeholder="Room Password" maxlength="50" style="display: none;">
+                          placeholder="Description (optional)" maxlength="200" rows="3"></textarea>
+                <input type="password" id="room-pass-input" class="modern-input" 
+                       placeholder="Password (optional)" maxlength="50">
                 <button class="modern-btn" onclick="createRoom()">
                     Create Room
                 </button>
@@ -269,28 +238,10 @@
                        placeholder="Room Name" maxlength="50">
                 <textarea id="edit-room-desc" class="modern-input" 
                           placeholder="Description" maxlength="200" rows="3"></textarea>
-                <label><input type="checkbox" id="edit-room-password-check"> Change Password</label>
                 <input type="password" id="edit-room-pass" class="modern-input" 
-                       placeholder="New Password (leave empty to remove)" maxlength="50" style="display: none;">
+                       placeholder="New Password (leave empty to remove)" maxlength="50">
                 <button class="modern-btn" onclick="saveRoomEdit()">
                     Save Changes
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Clean Room Modal -->
-    <div id="clean-room-modal" class="modal">
-        <div class="modal-content glass-card">
-            <span class="modal-close" onclick="hideModal('clean-room-modal')">&times;</span>
-            <h2>🧹 Clean Messages</h2>
-            <div class="modal-body">
-                <p>Choose what to clean:</p>
-                <button class="modern-btn" onclick="cleanSpecificRoom()" style="margin: 0.5rem;">
-                    Clean Current Room
-                </button>
-                <button class="modern-btn" onclick="cleanAllRooms()" style="margin: 0.5rem; background: #ef4444;">
-                    Clean All Rooms
                 </button>
             </div>
         </div>
@@ -303,7 +254,7 @@
             <h2>🖼️ Send Image</h2>
             <div class="modal-body">
                 <input type="text" id="image-url-input" class="modern-input" 
-                       placeholder="Image URL[](https://...)">
+                       placeholder="Image URL (https://...)">
                 <button class="modern-btn" onclick="sendImageMessage()">
                     Send Image
                 </button>
@@ -451,8 +402,8 @@
                                 <button class="modern-btn small" onclick="updateChatMusic()">Update & Save</button>
                             </div>
                             <div class="setting-item">
-                                <button class="modern-btn" onclick="showCleanRoomModal()">
-                                    🧹 Clean Messages
+                                <button class="modern-btn" onclick="cleanAllRooms()">
+                                    🧹 Clean All Rooms
                                 </button>
                             </div>
                         </div>
