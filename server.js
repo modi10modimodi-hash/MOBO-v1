@@ -100,7 +100,7 @@ setInterval(() => {
 
 // ═══════════════════════════════════════════════════════════════
 // INITIALIZE OWNER & GLOBAL ROOM
-// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════
 
 function createOwner() {
   const ownerId = 'owner_cold_001';
@@ -288,32 +288,27 @@ io.on('connection', (socket) => {
         }
       }
 
-      const userId = 'user_' + uuidv4();
-      const hashedPassword = bcrypt.hashSync(password, 10);
-
+      const userId = uuidv4();
       const newUser = {
         id: userId,
         username: username,
         displayName: displayName,
-        password: hashedPassword,
-        isOwner: false,
-        joinDate: new Date().toISOString(),
-        avatar: gender === 'prince' ? '🤴' : gender === 'princess' ? '👸' : '👤',
+        password: bcrypt.hashSync(password, 10),
+        avatar: gender === 'prince' ? '👨' : '👩',
         gender: gender,
-        specialBadges: [],
-        canSendImages: false,
-        canSendVideos: false
+        joinDate: new Date().toISOString(),
+        lastActive: new Date().toISOString(),
+        canSendImages: true,
+        canSendVideos: true
       };
-
       users.set(userId, newUser);
       privateMessages.set(userId, {});
 
-      socket.emit('register-success', {
-        message: 'Account created!',
-        username: username
+      socket.emit('register-success', { 
+        message: 'Account created! Please login.', 
+        username: username 
       });
-
-      saveData();
+      setTimeout(() => saveData(), 100);
 
     } catch (error) {
       console.error('❌ Register error:', error);
@@ -322,307 +317,233 @@ io.on('connection', (socket) => {
   });
 
   // ───────────────────────────────────────────────────────────
-  // SEND MESSAGE
+  // CHANGE DISPLAY NAME (Available to all users)
+  // ───────────────────────────────────────────────────────────
+  socket.on('change-display-name', async (data) => {
+    try {
+      const { newDisplayName } = data;
+      if (!socket.userId || !newDisplayName || newDisplayName.length < 2 || newDisplayName.length > 30) {
+        return socket.emit('error', 'Invalid name (2-30 chars)');
+      }
+
+      // Check uniqueness
+      let nameExists = false;
+      for (const user of users.values()) {
+        if (user.displayName.toLowerCase() === newDisplayName.toLowerCase() && user.id !== socket.userId) {
+          nameExists = true;
+          break;
+        }
+      }
+      if (nameExists) {
+        return socket.emit('error', 'Display name already taken');
+      }
+
+      const user = users.get(socket.userId);
+      if (user) {
+        user.displayName = newDisplayName;
+        socket.userData.displayName = newDisplayName;
+        socket.emit('display-name-changed', { displayName: newDisplayName });
+        io.to(socket.currentRoom).emit('user-name-changed', { 
+          userId: socket.userId, 
+          newName: newDisplayName 
+        });
+        setTimeout(() => saveData(), 100);
+        socket.emit('action-success', 'Name changed');
+      }
+    } catch (error) {
+      console.error('❌ Name change error:', error);
+      socket.emit('error', 'Failed to change name');
+    }
+  });
+
+  // ───────────────────────────────────────────────────────────
+  // MAKE MODERATOR
+  // ───────────────────────────────────────────────────────────
+  socket.on('make-moderator', async (data) => {
+    try {
+      const { userId, roomId } = data;
+      const user = users.get(socket.userId);
+      const room = rooms.get(roomId);
+      if (!user || !user.isOwner || !room) return;
+
+      if (!room.moderators.includes(userId)) {
+        room.moderators.push(userId);
+        io.to(roomId).emit('moderator-added', { userId, roomId });
+        socket.emit('action-success', 'Moderator added');
+        setTimeout(() => saveData(), 100);
+      }
+    } catch (error) {
+      console.error('❌ Moderator error:', error);
+    }
+  });
+
+  socket.on('remove-moderator', async (data) => {
+    try {
+      const { userId, roomId } = data;
+      const user = users.get(socket.userId);
+      const room = rooms.get(roomId);
+      if (!user || !user.isOwner || !room) return;
+
+      const index = room.moderators.indexOf(userId);
+      if (index > -1) {
+        room.moderators.splice(index, 1);
+        io.to(roomId).emit('moderator-removed', { userId, roomId });
+        socket.emit('action-success', 'Moderator removed');
+        setTimeout(() => saveData(), 100);
+      }
+    } catch (error) {
+      console.error('❌ Remove moderator error:', error);
+    }
+  });
+
+  // ───────────────────────────────────────────────────────────
+  // MESSAGE HANDLING
   // ───────────────────────────────────────────────────────────
   socket.on('send-message', async (data) => {
     try {
+      const { message, roomId } = data;
       const user = users.get(socket.userId);
-      if (!user || !socket.currentRoom) return;
+      const room = rooms.get(roomId || socket.currentRoom);
+      if (!user || !room || (!user.isOwner && room.isSilenced)) return;
 
-      const room = rooms.get(socket.currentRoom);
-      if (!room) return;
-
-      if (room.isSilenced && !user.isOwner) {
-        return socket.emit('message-error', 'Room is silenced');
-      }
-
-      const muteInfo = mutedUsers.get(socket.userId);
-      if (muteInfo) {
-        const canUnmute = !muteInfo.byOwner && muteInfo.temporary && muteInfo.expires && muteInfo.expires <= Date.now();
-        if (!canUnmute) {
-          return socket.emit('message-error', 'You are muted');
-        } else {
-          mutedUsers.delete(socket.userId);
-        }
-      }
-
-      const message = {
-        id: 'msg_' + uuidv4(),
-        userId: socket.userId,
-        username: user.displayName,
-        avatar: user.avatar,
-        text: data.text.trim().substring(0, 500),
-        timestamp: new Date().toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit'
-        }),
-        date: new Date().toISOString(),
-        isOwner: user.isOwner || false,
-        isModerator: room.moderators.includes(socket.userId),
-        specialBadges: user.specialBadges || [],
-        roomId: socket.currentRoom,
-        edited: false,
-        isImage: false,
-        isVideo: false
+      const messageId = uuidv4();
+      const now = new Date().toISOString();
+      const newMessage = {
+        id: messageId,
+        from: user.displayName,
+        fromId: socket.userId,
+        message: message.trim().substring(0, 500),
+        timestamp: now,
+        isEdited: false,
+        editableBy: ['owner', 'moderator', 'sender'] // Allow all to edit own messages
       };
 
-      room.messages.push(message);
-      
-      if (room.messages.length > 50) {
-        room.messages = room.messages.slice(-50);
-      }
+      room.messages.push(newMessage);
+      if (room.messages.length > 50) room.messages.shift();
 
-      io.to(socket.currentRoom).emit('new-message', message);
-      onlineUsers.set(socket.userId, Date.now());
-      
+      io.to(roomId || socket.currentRoom).emit('new-message', newMessage);
       setTimeout(() => saveData(), 100);
 
     } catch (error) {
       console.error('❌ Message error:', error);
-      socket.emit('message-error', 'Failed to send');
     }
   });
 
   // ───────────────────────────────────────────────────────────
-  // EDIT MESSAGE
+  // EDIT MESSAGE (Available to all for their own messages)
   // ───────────────────────────────────────────────────────────
   socket.on('edit-message', async (data) => {
     try {
-      const user = users.get(socket.userId);
-      if (!user) return;
-
-      const room = rooms.get(socket.currentRoom);
+      const { messageId, newText, roomId } = data;
+      const room = rooms.get(roomId || socket.currentRoom);
       if (!room) return;
 
-      const messageIndex = room.messages.findIndex(m => 
-        m.id === data.messageId && (m.userId === socket.userId || user.isOwner)
-      );
-      
-      if (messageIndex !== -1) {
-        room.messages[messageIndex].text = data.newText.trim().substring(0, 500);
-        room.messages[messageIndex].edited = true;
-        
-        io.to(socket.currentRoom).emit('message-edited', {
-          messageId: data.messageId,
-          newText: room.messages[messageIndex].text
-        });
-        
-        setTimeout(() => saveData(), 100);
+      const message = room.messages.find(m => m.id === messageId);
+      if (!message || message.fromId !== socket.userId) {
+        return socket.emit('error', 'Cannot edit this message');
       }
 
-    } catch (error) {
-      console.error('❌ Edit error:', error);
-    }
-  });
-
-  // ───────────────────────────────────────────────────────────
-  // SEND IMAGE (Owner Only)
-  // ───────────────────────────────────────────────────────────
-  socket.on('send-image', async (data) => {
-    try {
-      const user = users.get(socket.userId);
-      if (!user || !user.canSendImages) {
-        return socket.emit('error', 'No permission');
+      // Allow edit within 5 minutes
+      const messageTime = new Date(message.timestamp).getTime();
+      const now = Date.now();
+      if (now - messageTime > 300000) {
+        return socket.emit('error', 'Cannot edit old messages');
       }
 
-      const room = rooms.get(socket.currentRoom);
-      if (!room) return;
+      message.message = newText.trim().substring(0, 500);
+      message.isEdited = true;
+      message.editedAt = new Date().toISOString();
 
-      const message = {
-        id: 'msg_' + uuidv4(),
-        userId: socket.userId,
-        username: user.displayName,
-        avatar: user.avatar,
-        imageUrl: data.imageUrl,
-        timestamp: new Date().toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit'
-        }),
-        date: new Date().toISOString(),
-        isOwner: true,
-        specialBadges: user.specialBadges || [],
-        roomId: socket.currentRoom,
-        isImage: true,
-        isVideo: false
-      };
-
-      room.messages.push(message);
-      
-      if (room.messages.length > 50) {
-        room.messages = room.messages.slice(-50);
-      }
-
-      io.to(socket.currentRoom).emit('new-message', message);
-      setTimeout(() => saveData(), 100);
-
-    } catch (error) {
-      console.error('❌ Image error:', error);
-    }
-  });
-
-  // ───────────────────────────────────────────────────────────
-  // SEND VIDEO (Owner Only)
-  // ───────────────────────────────────────────────────────────
-  socket.on('send-video', async (data) => {
-    try {
-      const user = users.get(socket.userId);
-      if (!user || !user.canSendVideos) {
-        return socket.emit('error', 'No permission');
-      }
-
-      const room = rooms.get(socket.currentRoom);
-      if (!room) return;
-
-      const message = {
-        id: 'msg_' + uuidv4(),
-        userId: socket.userId,
-        username: user.displayName,
-        avatar: user.avatar,
-        videoUrl: data.videoUrl,
-        timestamp: new Date().toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit'
-        }),
-        date: new Date().toISOString(),
-        isOwner: true,
-        specialBadges: user.specialBadges || [],
-        roomId: socket.currentRoom,
-        isImage: false,
-        isVideo: true
-      };
-
-      room.messages.push(message);
-      
-      if (room.messages.length > 50) {
-        room.messages = room.messages.slice(-50);
-      }
-
-      io.to(socket.currentRoom).emit('new-message', message);
-      setTimeout(() => saveData(), 100);
-
-    } catch (error) {
-      console.error('❌ Video error:', error);
-    }
-  });
-
-  // ───────────────────────────────────────────────────────────
-  // CHANGE DISPLAY NAME
-  // ───────────────────────────────────────────────────────────
-  socket.on('change-display-name', async (data) => {
-    try {
-      const user = users.get(socket.userId);
-      if (!user) return;
-
-      const newName = data.newName.trim().substring(0, 30);
-      if (!newName) {
-        return socket.emit('error', 'Invalid name');
-      }
-
-      user.displayName = newName;
-      socket.emit('action-success', 'Name changed');
-      
-      updateUsersList(socket.currentRoom);
-      setTimeout(() => saveData(), 100);
-
-    } catch (error) {
-      console.error('❌ Change name error:', error);
-    }
-  });
-
-  // ───────────────────────────────────────────────────────────
-  // PRIVATE MESSAGES
-  // ───────────────────────────────────────────────────────────
-  socket.on('send-private-message', async (data) => {
-    try {
-      const sender = users.get(socket.userId);
-      const receiver = users.get(data.toUserId);
-      
-      if (!sender || !receiver) return;
-
-      const message = {
-        id: 'pm_' + uuidv4(),
-        from: socket.userId,
-        to: data.toUserId,
-        fromName: sender.displayName,
-        text: data.text.trim().substring(0, 500),
-        timestamp: new Date().toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit'
-        }),
-        date: new Date().toISOString(),
-        edited: false
-      };
-
-      if (!privateMessages.has(socket.userId)) {
-        privateMessages.set(socket.userId, {});
-      }
-      if (!privateMessages.get(socket.userId)[data.toUserId]) {
-        privateMessages.get(socket.userId)[data.toUserId] = [];
-      }
-      privateMessages.get(socket.userId)[data.toUserId].push(message);
-
-      if (!privateMessages.has(data.toUserId)) {
-        privateMessages.set(data.toUserId, {});
-      }
-      if (!privateMessages.get(data.toUserId)[socket.userId]) {
-        privateMessages.get(data.toUserId)[socket.userId] = [];
-      }
-      privateMessages.get(data.toUserId)[socket.userId].push(message);
-
-      const receiverSocket = Array.from(io.sockets.sockets.values())
-        .find(s => s.userId === data.toUserId);
-      
-      if (receiverSocket) {
-        receiverSocket.emit('new-private-message', message);
-      }
-
-      socket.emit('private-message-sent', message);
-      setTimeout(() => saveData(), 100);
-
-    } catch (error) {
-      console.error('❌ PM error:', error);
-    }
-  });
-
-  socket.on('get-private-messages', async (data) => {
-    try {
-      const messages = privateMessages.get(socket.userId)?.[data.withUserId] || [];
-      socket.emit('private-messages-list', {
-        withUserId: data.withUserId,
-        messages: messages.slice(-50)
+      io.to(roomId || socket.currentRoom).emit('message-edited', {
+        messageId,
+        newText: message.message + ' (edited)',
+        editedAt: message.editedAt
       });
+      setTimeout(() => saveData(), 100);
+      socket.emit('action-success', 'Message edited');
+
     } catch (error) {
-      console.error('❌ Get PM error:', error);
+      console.error('❌ Edit message error:', error);
     }
   });
 
   // ───────────────────────────────────────────────────────────
-  // ROOM MANAGEMENT
+  // JOIN ROOM
+  // ───────────────────────────────────────────────────────────
+  socket.on('join-room', (data) => {
+    try {
+      const { roomId } = data;
+      const room = rooms.get(roomId);
+      if (!room) return socket.emit('error', 'Room not found');
+
+      if (room.hasPassword && room.password && room.password !== data.password) {
+        return socket.emit('error', 'Invalid password');
+      }
+
+      // Leave previous room if not official
+      if (socket.currentRoom && !rooms.get(socket.currentRoom)?.isOfficial) {
+        const prevRoom = rooms.get(socket.currentRoom);
+        const prevIndex = prevRoom.users.indexOf(socket.userId);
+        if (prevIndex > -1) prevRoom.users.splice(prevIndex, 1);
+      }
+
+      socket.leave(socket.currentRoom);
+      socket.join(roomId);
+      socket.currentRoom = roomId;
+
+      if (!room.users.includes(socket.userId)) {
+        room.users.push(socket.userId);
+      }
+
+      socket.emit('room-joined', {
+        room: {
+          id: room.id,
+          name: room.name,
+          description: room.description,
+          messages: room.messages.slice(-50),
+          partyMode: systemSettings.partyMode[room.id] || false,
+          isSilenced: room.isSilenced || false
+        }
+      });
+
+      updateUsersList(roomId);
+      setTimeout(() => saveData(), 100);
+
+    } catch (error) {
+      console.error('❌ Join room error:', error);
+    }
+  });
+
+  // ───────────────────────────────────────────────────────────
+  // CREATE ROOM
   // ───────────────────────────────────────────────────────────
   socket.on('create-room', async (data) => {
     try {
       const user = users.get(socket.userId);
       if (!user) return;
 
-      const roomId = 'room_' + uuidv4();
+      const { name, description, hasPassword, password } = data;
+      if (!name || name.length < 3) return socket.emit('error', 'Room name too short');
+
+      const roomId = 'room_' + uuidv4().substring(0, 8);
       const newRoom = {
         id: roomId,
-        name: data.name.substring(0, 50),
-        description: data.description?.substring(0, 200) || '',
+        name: name,
+        description: description || '',
         createdBy: user.displayName,
         creatorId: socket.userId,
         users: [socket.userId],
         messages: [],
         isOfficial: false,
-        hasPassword: !!data.password,
-        password: data.password ? bcrypt.hashSync(data.password, 10) : null,
         moderators: [],
         isSilenced: false,
+        hasPassword: hasPassword || false,
+        password: hasPassword ? password : '',
         createdAt: new Date().toISOString()
       };
 
       rooms.set(roomId, newRoom);
-      socket.emit('room-created', { roomId: roomId, roomName: newRoom.name });
+      socket.emit('room-created', { roomId });
       updateRoomsList();
       setTimeout(() => saveData(), 100);
 
@@ -631,81 +552,25 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('join-room', async (data) => {
-    try {
-      const user = users.get(socket.userId);
-      if (!user) return;
-
-      const room = rooms.get(data.roomId);
-      if (!room) return socket.emit('error', 'Room not found');
-
-      if (room.hasPassword && !user.isOwner) {
-        if (!data.password || !bcrypt.compareSync(data.password, room.password)) {
-          return socket.emit('error', 'Wrong password');
-        }
-      }
-
-      if (socket.currentRoom && socket.currentRoom !== 'global_cold') {
-        const prevRoom = rooms.get(socket.currentRoom);
-        if (prevRoom) {
-          const index = prevRoom.users.indexOf(socket.userId);
-          if (index > -1) prevRoom.users.splice(index, 1);
-          socket.leave(socket.currentRoom);
-        }
-      }
-
-      if (!room.users.includes(socket.userId)) {
-        room.users.push(socket.userId);
-      }
-      socket.join(data.roomId);
-      socket.currentRoom = data.roomId;
-
-      socket.emit('room-joined', {
-        room: {
-          id: room.id,
-          name: room.name,
-          description: room.description,
-          messages: room.messages.slice(-50),
-          isCreator: room.creatorId === socket.userId,
-          isModerator: room.moderators.includes(socket.userId),
-          partyMode: systemSettings.partyMode[room.id] || false
-        }
-      });
-
-      io.to(data.roomId).emit('user-joined', {
-        username: user.displayName,
-        avatar: user.avatar
-      });
-
-      updateUsersList(data.roomId);
-      setTimeout(() => saveData(), 100);
-
-    } catch (error) {
-      console.error('❌ Join error:', error);
-    }
-  });
-
+  // ───────────────────────────────────────────────────────────
+  // UPDATE ROOM
+  // ───────────────────────────────────────────────────────────
   socket.on('update-room', async (data) => {
     try {
-      const admin = users.get(socket.userId);
-      if (!admin || !admin.isOwner) return;
-
+      const user = users.get(socket.userId);
       const room = rooms.get(data.roomId);
-      if (!room) return;
+      if (!user || !room || user.id !== room.creatorId) return;
 
-      if (data.name) room.name = data.name.substring(0, 50);
-      if (data.description !== undefined) room.description = data.description.substring(0, 200);
-      if (data.password !== undefined) {
-        room.hasPassword = !!data.password;
-        room.password = data.password ? bcrypt.hashSync(data.password, 10) : null;
+      if (data.name) room.name = data.name;
+      if (data.description !== undefined) room.description = data.description;
+      if (data.hasPassword !== undefined) {
+        room.hasPassword = data.hasPassword;
+        room.password = data.hasPassword ? data.password : '';
       }
 
+      io.to(data.roomId).emit('room-updated', room);
       socket.emit('action-success', 'Room updated');
       updateRoomsList();
-      io.to(data.roomId).emit('room-updated', {
-        name: room.name,
-        description: room.description
-      });
       setTimeout(() => saveData(), 100);
 
     } catch (error) {
@@ -713,345 +578,61 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('delete-room', async (data) => {
-    try {
-      const admin = users.get(socket.userId);
-      if (!admin || !admin.isOwner) return;
-
-      const room = rooms.get(data.roomId);
-      if (!room || room.isOfficial) return;
-
-      io.to(data.roomId).emit('room-deleted', { message: 'Room deleted' });
-      rooms.delete(data.roomId);
-      updateRoomsList();
-      setTimeout(() => saveData(), 100);
-
-    } catch (error) {
-      console.error('❌ Delete room error:', error);
-    }
-  });
-
-  socket.on('silence-room', async (data) => {
-    try {
-      const admin = users.get(socket.userId);
-      if (!admin || !admin.isOwner) return;
-
-      const room = rooms.get(data.roomId);
-      if (!room) return;
-
-      room.isSilenced = true;
-      io.to(data.roomId).emit('room-silenced', { message: 'Room silenced' });
-      setTimeout(() => saveData(), 100);
-
-    } catch (error) {
-      console.error('❌ Silence error:', error);
-    }
-  });
-
-  socket.on('unsilence-room', async (data) => {
-    try {
-      const admin = users.get(socket.userId);
-      if (!admin || !admin.isOwner) return;
-
-      const room = rooms.get(data.roomId);
-      if (!room) return;
-
-      room.isSilenced = false;
-      io.to(data.roomId).emit('room-unsilenced', { message: 'Room unsilenced' });
-      setTimeout(() => saveData(), 100);
-
-    } catch (error) {
-      console.error('❌ Unsilence error:', error);
-    }
-  });
-
-  socket.on('clean-chat', async (data) => {
-    try {
-      const admin = users.get(socket.userId);
-      if (!admin || !admin.isOwner) return;
-
-      const room = rooms.get(data.roomId);
-      if (!room) return;
-
-      room.messages = [];
-      io.to(data.roomId).emit('chat-cleaned', { message: 'Chat cleaned' });
-      setTimeout(() => saveData(), 100);
-
-    } catch (error) {
-      console.error('❌ Clean error:', error);
-    }
-  });
-
-  socket.on('clean-all-rooms', async () => {
-    try {
-      const admin = users.get(socket.userId);
-      if (!admin || !admin.isOwner) return;
-
-      rooms.forEach(room => {
-        room.messages = [];
-        io.to(room.id).emit('chat-cleaned', { message: 'All chats cleaned' });
-      });
-
-      socket.emit('action-success', 'All rooms cleaned');
-      setTimeout(() => saveData(), 100);
-
-    } catch (error) {
-      console.error('❌ Clean all error:', error);
-    }
-  });
-
   // ───────────────────────────────────────────────────────────
-  // USER MODERATION
+  // CLEAN ROOM (Specific or All)
   // ───────────────────────────────────────────────────────────
-  socket.on('mute-user', async (data) => {
+  socket.on('clean-room', async (data) => {
     try {
-      const admin = users.get(socket.userId);
-      const targetUser = users.get(data.userId);
-      
-      if (!admin || !targetUser) return;
-      if (targetUser.isOwner) return socket.emit('error', 'Cannot mute owner');
+      const user = users.get(socket.userId);
+      if (!user || !user.isOwner) return;
 
-      const room = rooms.get(data.roomId || socket.currentRoom);
-      const canMute = admin.isOwner || (room && room.moderators.includes(socket.userId));
-
-      if (!canMute) return socket.emit('error', 'No permission');
-
-      const duration = parseInt(data.duration) || 0;
-      const isPermanent = duration === 0;
-      
-      mutedUsers.set(data.userId, {
-        username: data.username,
-        expires: isPermanent ? null : Date.now() + (duration * 60000),
-        reason: data.reason || 'Rule violation',
-        mutedBy: admin.displayName,
-        mutedById: socket.userId,
-        temporary: !isPermanent,
-        byOwner: admin.isOwner,
-        roomId: data.roomId || socket.currentRoom
-      });
-
-      socket.emit('action-success', `Muted ${targetUser.displayName}`);
-      setTimeout(() => saveData(), 100);
-
-    } catch (error) {
-      console.error('❌ Mute error:', error);
-    }
-  });
-
-  socket.on('unmute-user', async (data) => {
-    try {
-      const admin = users.get(socket.userId);
-      if (!admin) return;
-
-      const muteInfo = mutedUsers.get(data.userId);
-      if (!muteInfo) return;
-
-      if (muteInfo.byOwner && !admin.isOwner) {
-        return socket.emit('error', 'Only owner can unmute');
-      }
-
-      const room = rooms.get(socket.currentRoom);
-      const canUnmute = admin.isOwner || (room && room.moderators.includes(socket.userId));
-
-      if (!canUnmute) return socket.emit('error', 'No permission');
-
-      mutedUsers.delete(data.userId);
-      socket.emit('action-success', 'User unmuted');
-      setTimeout(() => saveData(), 100);
-
-    } catch (error) {
-      console.error('❌ Unmute error:', error);
-    }
-  });
-
-  socket.on('unmute-multiple', async (data) => {
-    try {
-      const admin = users.get(socket.userId);
-      if (!admin || !admin.isOwner) return;
-
-      data.userIds.forEach(userId => {
-        mutedUsers.delete(userId);
-      });
-
-      socket.emit('action-success', `Unmuted ${data.userIds.length} users`);
-      setTimeout(() => saveData(), 100);
-
-    } catch (error) {
-      console.error('❌ Unmute multiple error:', error);
-    }
-  });
-
-  socket.on('ban-user', async (data) => {
-    try {
-      const admin = users.get(socket.userId);
-      const targetUser = users.get(data.userId);
-      
-      if (!admin || !targetUser) return;
-      if (!admin.isOwner) return socket.emit('error', 'Only owner can ban');
-      if (targetUser.isOwner) return socket.emit('error', 'Cannot ban owner');
-
-      bannedUsers.set(data.userId, {
-        username: data.username,
-        reason: data.reason || 'Banned',
-        bannedBy: admin.displayName,
-        bannedAt: new Date().toISOString(),
-        userIP: socket.userIP
-      });
-
-      bannedIPs.set(socket.userIP, {
-        userId: data.userId,
-        bannedAt: new Date().toISOString()
-      });
-
-      const targetSocket = Array.from(io.sockets.sockets.values())
-        .find(s => s.userId === data.userId);
-      
-      if (targetSocket) {
-        targetSocket.emit('banned', { reason: data.reason });
-        targetSocket.disconnect(true);
-      }
-
-      socket.emit('action-success', `Banned ${targetUser.displayName}`);
-      setTimeout(() => saveData(), 100);
-
-    } catch (error) {
-      console.error('❌ Ban error:', error);
-    }
-  });
-
-  socket.on('unban-user', async (data) => {
-    try {
-      const admin = users.get(socket.userId);
-      if (!admin || !admin.isOwner) return;
-
-      const banInfo = bannedUsers.get(data.userId);
-      if (banInfo && banInfo.userIP) {
-        bannedIPs.delete(banInfo.userIP);
-      }
-
-      bannedUsers.delete(data.userId);
-      socket.emit('action-success', 'User unbanned');
-      setTimeout(() => saveData(), 100);
-
-    } catch (error) {
-      console.error('❌ Unban error:', error);
-    }
-  });
-
-  socket.on('unban-multiple', async (data) => {
-    try {
-      const admin = users.get(socket.userId);
-      if (!admin || !admin.isOwner) return;
-
-      data.userIds.forEach(userId => {
-        const banInfo = bannedUsers.get(userId);
-        if (banInfo && banInfo.userIP) {
-          bannedIPs.delete(banInfo.userIP);
+      if (data.allRooms) {
+        rooms.forEach(room => {
+          if (!room.isOfficial) room.messages = [];
+        });
+        io.emit('chat-cleaned', { message: 'All rooms cleaned by owner' });
+      } else {
+        const room = rooms.get(data.roomId);
+        if (room) {
+          room.messages = [];
+          io.to(data.roomId).emit('chat-cleaned', { message: `Room ${room.name} cleaned` });
         }
-        bannedUsers.delete(userId);
-      });
-
-      socket.emit('action-success', `Unbanned ${data.userIds.length} users`);
-      setTimeout(() => saveData(), 100);
-
-    } catch (error) {
-      console.error('❌ Unban multiple error:', error);
-    }
-  });
-
-  socket.on('delete-account', async (data) => {
-    try {
-      const admin = users.get(socket.userId);
-      if (!admin || !admin.isOwner) return;
-
-      const targetUser = users.get(data.userId);
-      if (!targetUser || targetUser.isOwner) return;
-
-      rooms.forEach(room => {
-        room.messages = room.messages.filter(m => m.userId !== data.userId);
-        const index = room.users.indexOf(data.userId);
-        if (index > -1) room.users.splice(index, 1);
-      });
-
-      users.delete(data.userId);
-      privateMessages.delete(data.userId);
-      mutedUsers.delete(data.userId);
-      bannedUsers.delete(data.userId);
-
-      const targetSocket = Array.from(io.sockets.sockets.values())
-        .find(s => s.userId === data.userId);
-      
-      if (targetSocket) {
-        targetSocket.emit('account-deleted', { message: 'Account deleted' });
-        targetSocket.disconnect(true);
       }
-
-      socket.emit('action-success', `Deleted: ${targetUser.displayName}`);
-      updateUsersList(socket.currentRoom);
       setTimeout(() => saveData(), 100);
+      socket.emit('action-success', 'Room(s) cleaned');
 
     } catch (error) {
-      console.error('❌ Delete account error:', error);
+      console.error('❌ Clean room error:', error);
     }
   });
 
-  socket.on('add-moderator', async (data) => {
-    try {
-      const admin = users.get(socket.userId);
-      if (!admin || !admin.isOwner) return;
-
-      const room = rooms.get(data.roomId || socket.currentRoom);
-      if (!room) return;
-
-      if (!room.moderators.includes(data.userId)) {
-        room.moderators.push(data.userId);
-      }
-
-      socket.emit('action-success', 'Moderator added');
-      updateUsersList(room.id);
-      setTimeout(() => saveData(), 100);
-
-    } catch (error) {
-      console.error('❌ Add mod error:', error);
-    }
-  });
-
-  socket.on('remove-moderator', async (data) => {
-    try {
-      const admin = users.get(socket.userId);
-      if (!admin || !admin.isOwner) return;
-
-      const room = rooms.get(data.roomId || socket.currentRoom);
-      if (!room) return;
-
-      const index = room.moderators.indexOf(data.userId);
-      if (index > -1) {
-        room.moderators.splice(index, 1);
-      }
-
-      socket.emit('action-success', 'Moderator removed');
-      updateUsersList(room.id);
-      setTimeout(() => saveData(), 100);
-
-    } catch (error) {
-      console.error('❌ Remove mod error:', error);
-    }
-  });
-
+  // ───────────────────────────────────────────────────────────
+  // DELETE MESSAGE (Owner/Mod/Sender)
+  // ───────────────────────────────────────────────────────────
   socket.on('delete-message', async (data) => {
     try {
-      const admin = users.get(socket.userId);
-      if (!admin || !admin.isOwner) return;
-
-      const room = rooms.get(data.roomId);
+      const { messageId, roomId } = data;
+      const user = users.get(socket.userId);
+      const room = rooms.get(roomId || socket.currentRoom);
       if (!room) return;
 
-      const index = room.messages.findIndex(m => m.id === data.messageId);
-      if (index !== -1) {
-        room.messages.splice(index, 1);
-        io.to(data.roomId).emit('message-deleted', { messageId: data.messageId });
-        setTimeout(() => saveData(), 100);
+      const message = room.messages.find(m => m.id === messageId);
+      if (!message) return;
+
+      const isOwner = user.isOwner;
+      const isMod = room.moderators.includes(socket.userId);
+      const isSender = message.fromId === socket.userId;
+
+      if (!isOwner && !isMod && !isSender) {
+        return socket.emit('error', 'No permission to delete');
       }
+
+      const index = room.messages.findIndex(m => m.id === messageId);
+      if (index > -1) room.messages.splice(index, 1);
+
+      io.to(roomId || socket.currentRoom).emit('message-deleted', { messageId });
+      setTimeout(() => saveData(), 100);
+      socket.emit('action-success', 'Message deleted');
 
     } catch (error) {
       console.error('❌ Delete message error:', error);
@@ -1059,56 +640,133 @@ io.on('connection', (socket) => {
   });
 
   // ───────────────────────────────────────────────────────────
-  // PARTY MODE
+  // MUTE/BAN/SILENCE (Enhanced)
   // ───────────────────────────────────────────────────────────
-  socket.on('toggle-party-mode', async (data) => {
+  socket.on('mute-user', async (data) => {
     try {
-      const admin = users.get(socket.userId);
-      if (!admin || !admin.isOwner) return;
+      const { targetUserId, temporary, duration, reason } = data;
+      const user = users.get(socket.userId);
+      if (!user || !user.isOwner) return;
 
-      if (!systemSettings.partyMode) {
-        systemSettings.partyMode = {};
+      const muteData = {
+        byOwner: true,
+        temporary: temporary || false,
+        duration: duration || 0,
+        reason: reason || 'Muted',
+        username: users.get(targetUserId)?.displayName || 'Unknown'
+      };
+
+      if (muteData.temporary) {
+        muteData.expires = Date.now() + (duration * 60000);
       }
 
-      systemSettings.partyMode[data.roomId] = data.enabled;
-      
-      io.to(data.roomId).emit('party-mode-changed', { enabled: data.enabled });
-      socket.emit('action-success', data.enabled ? 'Party ON' : 'Party OFF');
+      mutedUsers.set(targetUserId, muteData);
+      io.to(targetUserId).emit('user-muted', muteData);
+      socket.emit('action-success', `User muted`);
       setTimeout(() => saveData(), 100);
 
     } catch (error) {
-      console.error('❌ Party error:', error);
+      console.error('❌ Mute error:', error);
     }
   });
 
-  // ───────────────────────────────────────────────────────────
-  // YOUTUBE
-  // ───────────────────────────────────────────────────────────
-  socket.on('start-youtube-watch', async (data) => {
+  socket.on('ban-user', async (data) => {
     try {
-      const admin = users.get(socket.userId);
-      if (!admin || !admin.isOwner) return;
+      const { targetUserId, reason } = data;
+      const user = users.get(socket.userId);
+      if (!user || !user.isOwner) return;
 
-      if (socket.currentRoom !== 'global_cold') {
-        return socket.emit('error', 'YouTube only in Global Room');
-      }
-
-      io.to('global_cold').emit('youtube-started', {
-        videoId: data.videoId,
-        startedBy: admin.displayName
+      bannedUsers.set(targetUserId, {
+        reason: reason || 'Banned',
+        byOwner: true,
+        timestamp: new Date().toISOString(),
+        username: users.get(targetUserId)?.displayName || 'Unknown'
       });
 
+      io.to(targetUserId).emit('banned', { reason });
+      socket.emit('action-success', 'User banned');
+      setTimeout(() => saveData(), 100);
+
     } catch (error) {
-      console.error('❌ YouTube error:', error);
+      console.error('❌ Ban error:', error);
     }
   });
 
-  socket.on('stop-youtube-watch', async () => {
+  socket.on('silence-room', async (data) => {
     try {
-      const admin = users.get(socket.userId);
-      if (!admin || !admin.isOwner) return;
+      const user = users.get(socket.userId);
+      const room = rooms.get(data.roomId);
+      if (!user || !user.isOwner || !room) return;
 
-      io.to('global_cold').emit('youtube-stopped');
+      room.isSilenced = data.silenced;
+      io.to(data.roomId).emit(room.isSilenced ? 'room-silenced' : 'room-unsilenced', {
+        message: room.isSilenced ? `${room.name} silenced` : `${room.name} unsilenced`
+      });
+      socket.emit('action-success', 'Room silenced toggled');
+      setTimeout(() => saveData(), 100);
+
+    } catch (error) {
+      console.error('❌ Silence room error:', error);
+    }
+  });
+
+  // ───────────────────────────────────────────────────────────
+  // PARTY MODE
+  // ───────────────────────────────────────────────────────────
+  socket.on('toggle-party', (data) => {
+    try {
+      const user = users.get(socket.userId);
+      if (!user || !user.isOwner) return;
+
+      const roomId = data.roomId || socket.currentRoom;
+      systemSettings.partyMode[roomId] = data.enabled;
+      io.to(roomId).emit('party-mode-changed', { enabled: data.enabled });
+      socket.emit('action-success', 'Party mode toggled');
+      setTimeout(() => saveData(), 100);
+
+    } catch (error) {
+      console.error('❌ Party mode error:', error);
+    }
+  });
+
+  // ───────────────────────────────────────────────────────────
+  // YOUTUBE (With Size Control)
+  // ───────────────────────────────────────────────────────────
+  socket.on('start-youtube', (data) => {
+    try {
+      const user = users.get(socket.userId);
+      if (!user || (!user.isOwner && !user.isModerator)) return; // Mods can start too
+
+      const { videoId, size } = data; // size: 'small', 'medium', 'large'
+      io.emit('youtube-started', { videoId, size, startedBy: user.displayName });
+      socket.emit('action-success', 'Video started');
+
+    } catch (error) {
+      console.error('❌ YouTube start error:', error);
+    }
+  });
+
+  socket.on('change-youtube-size', (data) => {
+    try {
+      const user = users.get(socket.userId);
+      if (!user || !user.isOwner) return; // Only owner changes size
+
+      const { size } = data;
+      io.emit('youtube-size-changed', { size });
+      socket.emit('action-success', 'Video size changed');
+
+    } catch (error) {
+      console.error('❌ YouTube size error:', error);
+    }
+  });
+
+  socket.on('stop-youtube', () => {
+    try {
+      const user = users.get(socket.userId);
+      if (!user || (!user.isOwner && !user.isModerator)) return;
+
+      io.emit('youtube-stopped');
+      socket.emit('action-success', 'Video stopped');
 
     } catch (error) {
       console.error('❌ Stop YouTube error:', error);
@@ -1116,27 +774,116 @@ io.on('connection', (socket) => {
   });
 
   // ───────────────────────────────────────────────────────────
-  // SETTINGS
+  // IMAGE/VIDEO
   // ───────────────────────────────────────────────────────────
-  socket.on('update-settings', async (data) => {
+  socket.on('send-image', async (data) => {
     try {
+      const { imageUrl, roomId } = data;
       const user = users.get(socket.userId);
-      if (!user || !user.isOwner) return;
+      const room = rooms.get(roomId || socket.currentRoom);
+      if (!user || !room) return;
 
-      if (data.siteLogo) systemSettings.siteLogo = data.siteLogo;
-      if (data.siteTitle) systemSettings.siteTitle = data.siteTitle;
-      if (data.backgroundColor) systemSettings.backgroundColor = data.backgroundColor;
-      if (data.loginMusic !== undefined) systemSettings.loginMusic = data.loginMusic;
-      if (data.chatMusic !== undefined) systemSettings.chatMusic = data.chatMusic;
-      if (data.loginMusicVolume !== undefined) systemSettings.loginMusicVolume = data.loginMusicVolume;
-      if (data.chatMusicVolume !== undefined) systemSettings.chatMusicVolume = data.chatMusicVolume;
+      const messageId = uuidv4();
+      const now = new Date().toISOString();
+      const newMessage = {
+        id: messageId,
+        from: user.displayName,
+        fromId: socket.userId,
+        type: 'image',
+        imageUrl: imageUrl,
+        timestamp: now
+      };
 
-      io.emit('settings-updated', systemSettings);
-      socket.emit('action-success', 'Settings saved');
+      room.messages.push(newMessage);
+      if (room.messages.length > 50) room.messages.shift();
+
+      io.to(roomId || socket.currentRoom).emit('new-message', newMessage);
       setTimeout(() => saveData(), 100);
 
     } catch (error) {
-      console.error('❌ Settings error:', error);
+      console.error('❌ Image error:', error);
+    }
+  });
+
+  socket.on('send-video', async (data) => {
+    try {
+      const { videoUrl, roomId } = data;
+      const user = users.get(socket.userId);
+      const room = rooms.get(roomId || socket.currentRoom);
+      if (!user || !room) return;
+
+      const messageId = uuidv4();
+      const now = new Date().toISOString();
+      const newMessage = {
+        id: messageId,
+        from: user.displayName,
+        fromId: socket.userId,
+        type: 'video',
+        videoUrl: videoUrl,
+        timestamp: now
+      };
+
+      room.messages.push(newMessage);
+      if (room.messages.length > 50) room.messages.shift();
+
+      io.to(roomId || socket.currentRoom).emit('new-message', newMessage);
+      setTimeout(() => saveData(), 100);
+
+    } catch (error) {
+      console.error('❌ Video error:', error);
+    }
+  });
+
+  // ───────────────────────────────────────────────────────────
+  // PRIVATE MESSAGES
+  // ───────────────────────────────────────────────────────────
+  socket.on('send-private-message', async (data) => {
+    try {
+      const { toUserId, message } = data;
+      const user = users.get(socket.userId);
+      if (!user || !toUserId || !message) return;
+
+      const messageId = 'pm_' + uuidv4();
+      const now = new Date().toISOString();
+      const newMessage = {
+        id: messageId,
+        from: user.displayName,
+        fromId: socket.userId,
+        to: toUserId,
+        message: message.trim().substring(0, 500),
+        timestamp: now
+      };
+
+      if (!privateMessages.has(socket.userId)) privateMessages.set(socket.userId, []);
+      if (!privateMessages.has(toUserId)) privateMessages.set(toUserId, []);
+      
+      privateMessages.get(socket.userId).push(newMessage);
+      privateMessages.get(toUserId).push(newMessage);
+
+      socket.emit('private-message-sent', newMessage);
+      io.to(toUserId).emit('new-private-message', newMessage);
+      setTimeout(() => saveData(), 100);
+
+    } catch (error) {
+      console.error('❌ Private message error:', error);
+    }
+  });
+
+  socket.on('get-private-messages', (data) => {
+    try {
+      const { withUserId } = data;
+      if (!privateMessages.has(socket.userId) || !privateMessages.has(withUserId)) {
+        return socket.emit('private-messages-list', { messages: [], withUserId });
+      }
+
+      const messages = privateMessages.get(socket.userId).filter(m => 
+        (m.fromId === socket.userId && m.to === withUserId) || 
+        (m.fromId === withUserId && m.to === socket.userId)
+      ).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+      socket.emit('private-messages-list', { messages, withUserId });
+    } catch (error) {
+      console.error('❌ Get PM error:', error);
     }
   });
 
@@ -1190,6 +937,32 @@ io.on('connection', (socket) => {
   });
 
   // ───────────────────────────────────────────────────────────
+  // SETTINGS (Apply to all, including login screen via body class)
+  // ───────────────────────────────────────────────────────────
+  socket.on('update-settings', async (data) => {
+    try {
+      const user = users.get(socket.userId);
+      if (!user || !user.isOwner) return;
+
+      if (data.siteLogo) systemSettings.siteLogo = data.siteLogo;
+      if (data.siteTitle) systemSettings.siteTitle = data.siteTitle;
+      if (data.backgroundColor) systemSettings.backgroundColor = data.backgroundColor;
+      if (data.loginMusic !== undefined) systemSettings.loginMusic = data.loginMusic;
+      if (data.chatMusic !== undefined) systemSettings.chatMusic = data.chatMusic;
+      if (data.loginMusicVolume !== undefined) systemSettings.loginMusicVolume = parseFloat(data.loginMusicVolume);
+      if (data.chatMusicVolume !== undefined) systemSettings.chatMusicVolume = parseFloat(data.chatMusicVolume);
+
+      // Emit to all connected, including login screen
+      io.emit('settings-updated', systemSettings);
+      socket.emit('action-success', 'Settings saved');
+      setTimeout(() => saveData(), 100);
+
+    } catch (error) {
+      console.error('❌ Settings error:', error);
+    }
+  });
+
+  // ───────────────────────────────────────────────────────────
   // GET LISTS
   // ───────────────────────────────────────────────────────────
   socket.on('get-rooms', () => updateRoomsList(socket));
@@ -1236,13 +1009,14 @@ io.on('connection', (socket) => {
   });
 
   // ───────────────────────────────────────────────────────────
-  // DISCONNECT
+  // DISCONNECT (Improved reconnection handling)
   // ───────────────────────────────────────────────────────────
-  socket.on('disconnect', () => {
+  socket.on('disconnect', (reason) => {
     try {
       if (socket.userId) {
         onlineUsers.delete(socket.userId);
         
+        // Don't remove from official rooms
         rooms.forEach(room => {
           if (!room.isOfficial) {
             const index = room.users.indexOf(socket.userId);
@@ -1250,7 +1024,7 @@ io.on('connection', (socket) => {
           }
         });
       }
-      console.log('🔌 Disconnect:', socket.id);
+      console.log('🔌 Disconnect:', socket.id, reason);
     } catch (error) {
       console.error('❌ Disconnect error:', error);
     }
@@ -1364,7 +1138,7 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`
 ╔════════════════════════════════════════════════════════════╗
 ║                                                            ║
-║           ❄️  Cold Room Server V2 - Final                ║
+║           ❄️  Cold Room Server V2 - Fixed Edition         ║
 ║                                                            ║
 ║  Port:        ${PORT.toString().padEnd(44)}║
 ║  Status:      ✅ Running                                  ║
@@ -1372,11 +1146,11 @@ server.listen(PORT, '0.0.0.0', () => {
 ║  Messages:    📝 Max 50 per room                          ║
 ║  Owner:       👑 COLDKING / ColdKing@2025                 ║
 ║                                                            ║
-║  Features:    ✅ Images, Videos, YouTube                  ║
-║               ✅ Mute (Temp/Permanent)                    ║
-║               ✅ Moderators, Ban, Party Mode              ║
-║               ✅ Private Messages, Edit Messages          ║
-║               ✅ Change Name, Gender Selection            ║
+║  Features:    ✅ Images, Videos, YouTube (Resizable)      ║
+║               ✅ Mute (Temp/Perm), Mods, Ban, Party Mode  ║
+║               ✅ Private Msg, Edit Msg (All Users)        ║
+║               ✅ Change Name (Unique), Gender             ║
+║               ✅ Reconnection, Music, Themes (Login Too)  ║
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝
   `);
